@@ -28,29 +28,27 @@
     </div>
 
     <div class="chat-messages-container" id="chat-messages">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="message {% if message.type == 'human' %}user{% else %}counselor{% endif %}">
-                    <div class="message-content">
-                        {{ message.content|safe }}
-                    </div>
-                    <div class="message-time">
-                        <small class="text-muted">{{ message.name }}</small>
-                    </div>
+        {% for message in chat_messages %}
+            <div class="message {% if not message.is_bot %}user{% else %}counselor{% endif %}">
+                <div class="message-content">
+                    {{ message.content|linebreaksbr }}
                 </div>
-            {% endfor %}
-        {% else %}
+                <div class="message-time">
+                    <small class="text-muted">{{ message.timestamp|date:"g:i A" }}</small>
+                </div>
+            </div>
+        {% empty %}
             <div class="text-center text-muted mt-4">
                 <i class="bi bi-chat-dots"></i>
                 <p>Start your conversation with the counselor</p>
             </div>
-        {% endif %}
+        {% endfor %}
     </div>
 
     <div class="chat-input-container bg-light">
-        <form id="message-form" method="POST" class="d-flex align-items-center">
+        <form id="message-form" class="d-flex align-items-center">
             {% csrf_token %}
-            <input type="text" class="form-control message-input" name="message" 
+            <input type="text" class="form-control message-input" id="message-input" 
                    placeholder="Type your message..." required>
             <button class="btn btn-dark ms-2" type="submit">
                 <i class="bi bi-send-fill"></i>
@@ -150,5 +148,5 @@
 {% endblock extra_css %}
 
 {% block extra_js %}
-    <script src="{% static 'js/chat.js' %}"></script>
+<script src="{% static 'js/chat.js' %}"></script>
 {% endblock extra_js %}

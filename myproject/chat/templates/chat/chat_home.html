@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid vh-100 d-flex flex-column">
+    <div class="row flex-grow-1">
+        <div class="col-md-12 d-flex flex-column">
+            <!-- Chat Container -->
+            <div class="chat-container flex-grow-1 d-flex flex-column bg-light">
+                <!-- Messages Area -->
+                <div id="messages-container" class="flex-grow-1 overflow-auto p-3">
+                    {% for message in messages %}
+                        {% if message.is_bot %}
+                            <div class="message bot-message mb-3">
+                                <div class="message-content">
+                                    {{ message.content|linebreaksbr }}
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="message user-message mb-3">
+                                <div class="message-content">
+                                    {{ message.content|linebreaksbr }}
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <!-- Input Area -->
+                <div class="input-area p-3 bg-white border-top">
+                    <form id="message-form" class="d-flex" onsubmit="return false;">
+                        {% csrf_token %}
+                        <textarea id="message-input" class="form-control me-2" rows="1" placeholder="Type your message..."></textarea>
+                        <button type="submit" class="btn btn-primary">Send</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .chat-container {
+        height: calc(100vh - 56px);
+        background-color: #f8f9fa;
+    }
+
+    .message {
+        max-width: 80%;
+        margin-bottom: 1rem;
+    }
+
+    .message-content {
+        padding: 0.75rem 1rem;
+        border-radius: 1rem;
+        display: inline-block;
+        max-width: 100%;
+        word-wrap: break-word;
+    }
+
+    .bot-message {
+        align-self: flex-start;
+    }
+
+    .bot-message .message-content {
+        background-color: #e9ecef;
+        color: #212529;
+    }
+
+    .user-message {
+        margin-left: auto;
+    }
+
+    .user-message .message-content {
+        background-color: #007bff;
+        color: white;
+    }
+
+    #message-input {
+        resize: none;
+        overflow-y: auto;
+        max-height: 100px;
+    }
+
+    .input-area {
+        background-color: white;
+        border-top: 1px solid #dee2e6;
+        padding: 1rem;
+    }
+</style>
+
+<!-- Place the script loading at the end of the body -->
+<script src="{% static 'js/chat.js' %}"></script>
+{% endblock %} 

@@ -1,13 +1,15 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib import messages
-from .models import UploadedFile
-from django.http import HttpResponseForbidden
+from django.contrib import messages as django_messages
+from .models import UploadedFile, Message
+from django.http import HttpResponseForbidden, JsonResponse
 import os
 from groq import Groq
 from langchain_groq import ChatGroq
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, filter_messages
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from dotenv import load_dotenv
+from django.views.decorators.csrf import csrf_exempt
+import json
 
 # Load environment variables
 load_dotenv()
@@ -22,70 +24,96 @@ llm = ChatGroq(
     max_retries=2,
 )
 
-def get_initial_messages():
-    # Define initial messages for the chat
-    return [
-        {
-            'content': "Hi, I'm your mental health counselor. How can I help you today?",
-            'name': "Counselor",
-            'type': 'ai'
-        }
-    ]
-
-def convert_to_langchain_message(message):
-    if message['type'] == 'human':
-        return HumanMessage(content=message['content'])
-    else:
-        return AIMessage(content=message['content'])
+def get_chat_history(user):
+    # Convert database messages to format needed for Groq
+    messages = []
+    for msg in Message.objects.filter(user=user).order_by('timestamp'):
+        if msg.is_bot:
+            messages.append(AIMessage(content=msg.content))
+        else:
+            messages.append(HumanMessage(content=msg.content))
+    return messages
 
 @login_required
 def chat_home(request):
-    # Get messages from session or initialize
-    messages = request.session.get('chat_messages', get_initial_messages())
+    # Get user's chat history
+    chat_messages = Message.objects.filter(user=request.user).order_by('timestamp')
     
-    if request.method == 'POST':
-        user_message = request.POST.get('message')
-        if user_message:
-            # Add user message
-            messages.append({
-                'content': user_message,
-                'name': request.user.username,
-                'type': 'human'
-            })
-            
-            # Convert messages for Groq
-            groq_messages = [
-                SystemMessage(content="You are a helpful mental health counselor chatbot."),
-                *[convert_to_langchain_message(msg) for msg in messages]
-            ]
-            
-            try:
-                # Get response from Groq
-                response = llm.invoke(groq_messages)
-                # Add AI response
-                messages.append({
-                    'content': str(response.content),
-                    'name': "Counselor",
-                    'type': 'ai'
-                })
-            except Exception as e:
-                print(f"Error getting response from Groq: {e}")
-                messages.append({
-                    'content': "I apologize, but I'm having trouble processing your request right now. Please try again.",
-                    'name': "Counselor",
-                    'type': 'ai'
-                })
-            
-            # Store messages in session
-            request.session['chat_messages'] = messages
-            request.session.modified = True
+    if not chat_messages.exists():
+        # Create initial bot message for new users
+        Message.objects.create(
+            user=request.user,
+            content="Hi, I'm your mental health counselor. How can I help you today?",
+            is_bot=True
+        )
+        chat_messages = Message.objects.filter(user=request.user)
     
     context = {
-        'messages': messages,
+        'chat_messages': chat_messages,
         'user': request.user,
         'hide_navbar': True
     }
     return render(request, 'chat/chat_home.html', context)
+
+@login_required
+@csrf_exempt
+def send_message(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            user_message = data.get('message', '').strip()
+            
+            if user_message:
+                # Save user message
+                Message.objects.create(
+                    user=request.user,
+                    content=user_message,
+                    is_bot=False
+                )
+                
+                # Get chat history and prepare for Groq
+                chat_history = get_chat_history(request.user)
+                groq_messages = [
+                    SystemMessage(content="You are a helpful mental health counselor chatbot."),
+                    *chat_history
+                ]
+                
+                try:
+                    # Get response from Groq
+                    response = llm.invoke(groq_messages)
+                    bot_message = str(response.content)
+                    
+                    # Save bot response
+                    Message.objects.create(
+                        user=request.user,
+                        content=bot_message,
+                        is_bot=True
+                    )
+                    
+                    return JsonResponse({
+                        'status': 'success',
+                        'message': bot_message,
+                        'user_message': user_message
+                    })
+                except Exception as e:
+                    print(f"Error getting response from Groq: {e}")
+                    error_message = "I apologize, but I'm having trouble processing your request right now. Please try again."
+                    Message.objects.create(
+                        user=request.user,
+                        content=error_message,
+                        is_bot=True
+                    )
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': error_message,
+                        'user_message': user_message
+                    })
+            
+            return JsonResponse({'status': 'error', 'message': 'Message cannot be empty'})
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON'})
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
 def is_admin(user):
     return user.is_staff
@@ -100,7 +128,7 @@ def admin_dashboard(request):
             size=uploaded_file.size
         )
         new_file.save()
-        messages.success(request, 'File uploaded successfully!')
+        django_messages.success(request, 'File uploaded successfully!')
         return redirect('admin_dashboard')
 
     files = UploadedFile.objects.all()
@@ -113,7 +141,7 @@ def delete_file(request, file_id):
             file = UploadedFile.objects.get(id=file_id)
             file.file.delete()  # Delete the actual file
             file.delete()  # Delete the database record
-            messages.success(request, 'File deleted successfully!')
+            django_messages.success(request, 'File deleted successfully!')
         except UploadedFile.DoesNotExist:
-            messages.error(request, 'File not found!')
+            django_messages.error(request, 'File not found!')
     return redirect('admin_dashboard') 
