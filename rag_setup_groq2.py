@@ -87,8 +87,8 @@ def setup_vector_store(data_file="mental_health_data.txt", use_web=False, web_qu
 llm = ChatGroq(
     api_key=groq_api_key,
     model="meta-llama/llama-4-scout-17b-16e-instruct",
-    temperature=0.2,
-    max_tokens=900,
+    temperature=0.7,
+    max_tokens=1000,
 )
 
 # === Prompt Template for JSON output ===

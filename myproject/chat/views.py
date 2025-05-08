@@ -115,11 +115,13 @@ def send_message(request):
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
-def is_admin(user):
-    return user.is_staff
-
-@user_passes_test(is_admin)
+@login_required
 def admin_dashboard(request):
+    # Double-check that only staff users can access this view
+    if not request.user.is_staff:
+        django_messages.error(request, "You don't have permission to access this page.")
+        return redirect('chat_home')
+        
     if request.method == 'POST' and request.FILES.get('file'):
         uploaded_file = request.FILES['file']
         new_file = UploadedFile(
@@ -134,8 +136,13 @@ def admin_dashboard(request):
     files = UploadedFile.objects.all()
     return render(request, 'admin/dashboard.html', {'files': files})
 
-@user_passes_test(is_admin)
+@login_required
 def delete_file(request, file_id):
+    # Double-check that only staff users can access this view
+    if not request.user.is_staff:
+        django_messages.error(request, "You don't have permission to access this page.")
+        return redirect('chat_home')
+        
     if request.method == 'POST':
         try:
             file = UploadedFile.objects.get(id=file_id)

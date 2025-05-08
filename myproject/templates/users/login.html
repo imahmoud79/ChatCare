@@ -7,14 +7,17 @@
     <div class="container mt-5">
         <div class="row justify-content-center">
             <div class="col-md-6">
-                <div class="card">
-                    <div class="card-body">
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
                         <h2 class="text-center mb-4">Log In</h2>
                         <form method="POST">
                             {% csrf_token %}
                             {{ form|crispy }}
-                            <div class="d-grid gap-2">
+                            <div class="d-grid gap-2 mb-3 mt-3">
                                 <button class="btn btn-primary" type="submit">Login</button>
+                            </div>
+                            <div class="text-center">
+                                <p class="mb-0">Don't have an account? <a href="{% url 'register' %}" class="text-decoration-none">Register here</a></p>
                             </div>
                         </form>
                     </div>

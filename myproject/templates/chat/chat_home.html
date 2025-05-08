@@ -18,9 +18,12 @@
                 <div class="ms-auto">
                     {% if user.is_authenticated %}
                         {% if user.is_staff %}
-                            <a href="{% url 'admin:index' %}" class="btn btn-outline-light btn-sm me-2">Admin</a>
+                            <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-light btn-sm me-2">Admin Dashboard</a>
                         {% endif %}
-                        <a href="{% url 'logout' %}" class="btn btn-outline-light btn-sm">Logout</a>
+                        <form method="POST" action="{% url 'logout' %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
+                        </form>
                     {% endif %}
                 </div>
             </div>

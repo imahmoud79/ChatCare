@@ -131,13 +131,13 @@ STATICFILES_DIRS = [
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Authentication settings
-LOGIN_REDIRECT_URL = 'chat'
+LOGIN_REDIRECT_URL = 'chat_home'
+LOGOUT_REDIRECT_URL = 'login'
 LOGIN_URL = 'login'
 
 # Crispy Forms settings
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
-CRISPY_TEMPLATE_PACK = 'bootstrap4'  # or 'bootstrap5' if you're using that
 
 # Media files (Uploaded files)
 MEDIA_URL = '/media/'
