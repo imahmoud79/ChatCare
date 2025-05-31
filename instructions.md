@@ -10,6 +10,11 @@ python manage.py runserver
 
 python manage.py startapp myapp
 
+
+mahmoud
+mi2371384@gmail.com
+mahmoud1234
+
 venv\Scripts\activate
 
 

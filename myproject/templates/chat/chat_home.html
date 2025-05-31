@@ -4,92 +4,101 @@
 {% block title %}AI-Based Virtual Student Counselor{% endblock %}
 
 {% block content %}
-<div class="container-fluid chat-container">
-    <div class="row chat-header bg-dark text-white py-3">
-        <div class="col">
-            <div class="d-flex align-items-center">
-                <div class="me-3">
-                    <i class="bi bi-robot fs-4"></i>
-                </div>
-                <div>
-                    <h5 class="mb-0">Mental Health Counselor</h5>
-                    <small class="text-light-emphasis">AI-powered support</small>
-                </div>
-                <div class="ms-auto">
-                    {% if user.is_authenticated %}
-                        {% if user.is_staff %}
-                            <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-light btn-sm me-2">Admin Dashboard</a>
-                        {% endif %}
-                        <form method="POST" action="{% url 'logout' %}" class="d-inline">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
-                        </form>
+<div class="container-fluid">
+    <div class="row page-content">
+        <!-- Chat Interface (Left Column) -->
+        <div class="col-md-7 chat-interface p-0 d-flex flex-column">
+            <div class="model-indicator px-3 py-2 border-bottom">
+                <small class="text-muted">Using model: 
+                    {% if user.userpreference.preferred_model == 'llama-3.3-70b-versatile' %}
+                        <span class="badge bg-dark">Llama 3.3 70B</span>
+                    {% elif user.userpreference.preferred_model == 'llama-3.1-8b-instant' %}
+                        <span class="badge bg-dark">Llama 3.1 8B Instant</span>
+                    {% elif user.userpreference.preferred_model == 'llama3-8b-8192' %}
+                        <span class="badge bg-dark">Llama 3 8B</span>
+                    {% else %}
+                        <span class="badge bg-dark">{{ user.userpreference.get_preferred_model_display }}</span>
                     {% endif %}
-                </div>
+                </small>
+                <a href="{% url 'settings_dashboard' %}?tab=model" class="small text-decoration-none float-end">Change model</a>
+            </div>
+            <div class="chat-messages-container flex-grow-1" id="chat-messages">
+                {% for message in chat_messages %}
+                    <div class="message {% if not message.is_bot %}user{% else %}counselor{% endif %}">
+                        <div class="message-content">
+                            {{ message.content|safe }}
+                        </div>
+                        <div class="message-time">
+                            <small class="text-muted">{{ message.timestamp|date:"g:i A" }}</small>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="text-center text-muted mt-4">
+                        <i class="bi bi-chat-dots"></i>
+                        <p>Start your conversation with the counselor</p>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="chat-input-container bg-light">
+                <form id="message-form" class="d-flex align-items-center">
+                    {% csrf_token %}
+                    <input type="text" class="form-control message-input" id="message-input" 
+                           placeholder="Type your message..." required>
+                    <button class="btn btn-dark ms-2" type="submit">
+                        <i class="bi bi-send-fill"></i>
+                    </button>
+                </form>
             </div>
         </div>
-    </div>
 
-    <div class="chat-messages-container" id="chat-messages">
-        {% for message in chat_messages %}
-            <div class="message {% if not message.is_bot %}user{% else %}counselor{% endif %}">
-                <div class="message-content">
-                    {{ message.content|linebreaksbr }}
+        <!-- Prompt Recommendations (Right Column) -->
+        <div class="col-md-5 prompt-recommendations p-3">
+            <h5 class="mb-3">Suggested Prompts</h5>
+            <div class="suggestion-spinner text-center py-5 d-none">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
                 </div>
-                <div class="message-time">
-                    <small class="text-muted">{{ message.timestamp|date:"g:i A" }}</small>
-                </div>
+                <p class="mt-2 text-muted">Generating suggestions...</p>
             </div>
-        {% empty %}
-            <div class="text-center text-muted mt-4">
-                <i class="bi bi-chat-dots"></i>
-                <p>Start your conversation with the counselor</p>
+            <div id="suggestion-list" class="suggestion-list">
+                <!-- Suggestions will be dynamically inserted here -->
             </div>
-        {% endfor %}
-    </div>
-
-    <div class="chat-input-container bg-light">
-        <form id="message-form" class="d-flex align-items-center">
-            {% csrf_token %}
-            <input type="text" class="form-control message-input" id="message-input" 
-                   placeholder="Type your message..." required>
-            <button class="btn btn-dark ms-2" type="submit">
-                <i class="bi bi-send-fill"></i>
-            </button>
-        </form>
+        </div>
     </div>
 </div>
 {% endblock content %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 <style>
-    .chat-container {
-        height: 100vh;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
+    .page-content {
+        height: calc(100vh - 60px);
+        overflow: hidden;
+        margin-top: 0.5rem;
     }
 
-    .chat-header {
-        flex-shrink: 0;
+    .chat-interface {
+        border-right: 1px solid #dee2e6;
+        height: 100%;
+        overflow: hidden;
     }
 
     .chat-messages-container {
-        flex-grow: 1;
         overflow-y: auto;
         padding: 1rem;
         background-color: #f0f2f5;
     }
 
     .chat-input-container {
-        flex-shrink: 0;
         padding: 1rem;
         border-top: 1px solid #dee2e6;
+        background-color: #f8f9fa;
+        position: sticky;
+        bottom: 0;
     }
 
     .message {
-        max-width: 75%;
+        max-width: 80%;
         margin-bottom: 1rem;
         padding: 0.5rem 1rem;
         border-radius: 1rem;
@@ -112,6 +121,63 @@
     .message-content {
         word-wrap: break-word;
         font-size: 0.95rem;
+        line-height: 1.5;
+    }
+    
+    /* Styling for HTML-formatted message content */
+    .message-content p {
+        margin-bottom: 0.8rem;
+    }
+    
+    .message-content strong {
+        font-weight: bold;
+    }
+    
+    .message-content em {
+        font-style: italic;
+    }
+    
+    .message-content ul, .message-content ol {
+        margin-bottom: 0.8rem;
+        margin-top: 0.5rem;
+        padding-left: 1.5rem;
+    }
+    
+    .message-content li {
+        margin-bottom: 0.4rem;
+    }
+    
+    .message-content h1, .message-content h2, .message-content h3, 
+    .message-content h4, .message-content h5, .message-content h6 {
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+        font-weight: bold;
+    }
+    
+    .message-content h1 { font-size: 1.5rem; }
+    .message-content h2 { font-size: 1.3rem; }
+    .message-content h3 { font-size: 1.1rem; }
+    .message-content h4 { font-size: 1rem; }
+    
+    .message-content code {
+        font-family: monospace;
+        background-color: #f0f0f0;
+        padding: 0.1rem 0.3rem;
+        border-radius: 3px;
+        font-size: 0.9em;
+    }
+    
+    .message-content pre {
+        background-color: #f0f0f0;
+        padding: 0.5rem;
+        border-radius: 5px;
+        overflow-x: auto;
+        margin: 0.5rem 0;
+    }
+    
+    /* Last paragraph in a message shouldn't have margin-bottom */
+    .message-content p:last-child {
+        margin-bottom: 0;
     }
 
     .message-time {
@@ -147,9 +213,408 @@
         -ms-overflow-style: none;
         scrollbar-width: none;
     }
+
+    /* Prompt Recommendations Styles */
+    .prompt-recommendations {
+        height: 100%;
+        overflow: hidden;
+        background-color: #f8f9fa;
+    }
+
+    .suggestion-list {
+        overflow-y: auto;
+        max-height: calc(100vh - 150px);
+    }
+
+    .suggestion-card {
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+    .suggestion-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .suggestion-card .card {
+        border-left: 4px solid #6c757d;
+    }
+
+    .suggestion-card .card:hover {
+        border-left-color: #0d6efd;
+        background-color: #f0f7ff;
+    }
+
+    /* Animations for new suggestions */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .suggestion-card.new {
+        animation: fadeIn 0.5s ease-out forwards;
+    }
 </style>
 {% endblock extra_css %}
 
 {% block extra_js %}
-<script src="{% static 'js/chat.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const messageForm = document.getElementById('message-form');
+        const messageInput = document.getElementById('message-input');
+        const chatMessages = document.getElementById('chat-messages');
+        const suggestionList = document.getElementById('suggestion-list');
+        const suggestionSpinner = document.querySelector('.suggestion-spinner');
+        let typingTimer;
+        let lastInputValue = '';
+        let isFetchingSuggestions = false;
+        let lastTypingTime = Date.now(); // Track when user last typed
+        let lastSuggestionUpdate = Date.now(); // Track when suggestions were last updated
+        let cachedSuggestions = null; // Cache for suggestions
+        
+        // Handle message submission
+        messageForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const message = messageInput.value.trim();
+            if (message) {
+                sendMessage(message);
+                messageInput.value = '';
+            }
+        });
+        
+        // Send message to backend and handle response
+        async function sendMessage(message) {
+            try {
+                console.log("Sending message:", message);
+                
+                // Display user message immediately
+                appendMessage(message, false);
+                
+                // Scroll to bottom
+                scrollToBottom();
+                
+                // Create temporary div for streaming response
+                const tempDiv = document.createElement('div');
+                tempDiv.className = 'message counselor';
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+                const timeDiv = document.createElement('div');
+                timeDiv.className = 'message-time';
+                const timeString = new Date().toLocaleTimeString([], {hour: 'numeric', minute:'2-digit'});
+                timeDiv.innerHTML = `<small class="text-muted">${timeString}</small>`;
+                tempDiv.appendChild(contentDiv);
+                tempDiv.appendChild(timeDiv);
+                
+                // Send to server
+                const response = await fetch('/chat/send/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+                
+                // Check if response is streaming
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('text/event-stream')) {
+                    // Add temporary div to chat
+                    chatMessages.appendChild(tempDiv);
+                    scrollToBottom();
+                    
+                    // Handle streaming response
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let fullResponse = "";  // Accumulate the complete response text
+                    
+                    while (true) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+                        
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
+                        
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const data = JSON.parse(line.slice(6));
+                                    if (data.content) {
+                                        // Accumulate the complete response
+                                        fullResponse += data.content;
+                                        // Show the temporary content with simple line breaks
+                                        contentDiv.innerHTML = fullResponse.replace(/\n/g, '<br>');
+                                        scrollToBottom();
+                                    }
+                                    if (data.done) {
+                                        // When streaming is complete, remove the temporary div
+                                        tempDiv.remove();
+                                        
+                                        // The formatted response is now available from the server
+                                        // We can display it with proper HTML formatting
+                                        appendMessage(data.message || fullResponse, true);
+                                        scrollToBottom();
+                                        
+                                        // Only refresh suggestions if they haven't been updated recently
+                                        if (Date.now() - lastSuggestionUpdate > 5 * 60 * 1000) { // 5 minutes
+                                            fetchSuggestions('', false);
+                                        }
+                                        break;
+                                    }
+                                } catch (e) {
+                                    console.error('Error parsing streaming data:', e);
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Handle regular JSON response
+                    const data = await response.json();
+                    console.log("Received response:", data);
+                    
+                    if (data.status === 'success') {
+                        // Display bot message
+                        appendMessage(data.message, true);
+                        // Only refresh suggestions if they haven't been updated recently
+                        if (Date.now() - lastSuggestionUpdate > 5 * 60 * 1000) { // 5 minutes
+                            fetchSuggestions('', false);
+                        }
+                    } else {
+                        // Display error message
+                        appendMessage(data.message || "Sorry, there was an error processing your request.", true);
+                        console.error('Error sending message:', data.message);
+                    }
+                }
+                
+                // Scroll to bottom again after new message
+                scrollToBottom();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                appendMessage("Sorry, there was an error communicating with the server.", true);
+                scrollToBottom();
+            }
+        }
+        
+        // Add message to chat
+        function appendMessage(content, isBot) {
+            console.log("Appending message:", content.substring(0, 50) + "...", "isBot:", isBot);
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], {hour: 'numeric', minute:'2-digit'});
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isBot ? 'counselor' : 'user'}`;
+            
+            // Create message content container
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            // For bot messages, use HTML directly; for user messages, convert newlines to <br>
+            if (isBot) {
+                contentDiv.innerHTML = content;
+            } else {
+                contentDiv.innerHTML = content.replace(/\n/g, '<br>');
+            }
+            
+            // Create time container
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            timeDiv.innerHTML = `<small class="text-muted">${timeString}</small>`;
+            
+            // Add content and time to message
+            messageDiv.appendChild(contentDiv);
+            messageDiv.appendChild(timeDiv);
+            
+            // Add message to chat
+            chatMessages.appendChild(messageDiv);
+            console.log("Messages container now has", chatMessages.children.length, "children");
+        }
+        
+        // Scroll chat to bottom
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Initial suggestions load
+        fetchSuggestions('', true);
+        
+        // Listen for input changes to update suggestions
+        messageInput.addEventListener('input', function() {
+            const currentValue = messageInput.value.trim();
+            
+            // Clear existing timer
+            clearTimeout(typingTimer);
+            
+            // Only fetch if the input has changed significantly
+            if (currentValue !== lastInputValue && 
+                (currentValue.length === 0 || 
+                 currentValue.length > 3 || 
+                 Math.abs(currentValue.length - lastInputValue.length) > 2)) {
+                
+                // Set a timer to fetch suggestions after typing stops
+                typingTimer = setTimeout(function() {
+                    // Use cached suggestions if available and input is empty
+                    if (cachedSuggestions && currentValue.length === 0) {
+                        updateSuggestionList(cachedSuggestions);
+                    } else {
+                        fetchSuggestions(currentValue, false);
+                    }
+                }, 500);
+                
+                lastInputValue = currentValue;
+            }
+        });
+        
+        // Fetch suggestions from the backend
+        async function fetchSuggestions(currentInput, force_refresh) {
+            // Exit early if already fetching suggestions or if we have recent suggestions
+            if (isFetchingSuggestions) return;
+            
+            // Skip refreshing if we have cached suggestions and it's been less than 5 minutes
+            const refreshInterval = 5 * 60 * 1000; // 5 minutes in milliseconds
+            if (!force_refresh && cachedSuggestions && 
+                (Date.now() - lastSuggestionUpdate < refreshInterval)) {
+                console.log('Using cached suggestions, still within refresh interval');
+                updateSuggestionList(cachedSuggestions);
+                return;
+            }
+            
+            try {
+                isFetchingSuggestions = true;
+                
+                // Only show spinner if we're forcing a refresh
+                if (force_refresh) {
+                    suggestionSpinner.classList.remove('d-none');
+                }
+                
+                const response = await fetch('/chat/get_suggestions/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ 
+                        current_input: currentInput,
+                        force_refresh: force_refresh
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    updateSuggestionList(data.suggestions);
+                    cachedSuggestions = data.suggestions;
+                    lastSuggestionUpdate = Date.now();
+                    
+                    // Store the last update timestamp in localStorage to help synchronize across tabs
+                    localStorage.setItem('last_suggestions_update', lastSuggestionUpdate);
+                } else {
+                    console.error('Error fetching suggestions:', data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            } finally {
+                isFetchingSuggestions = false;
+                suggestionSpinner.classList.add('d-none');
+            }
+        }
+        
+        // Make fetchSuggestions available globally for other scripts
+        window.fetchSuggestions = fetchSuggestions;
+        
+        // Listen for prompt engineering updates
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'prompt_settings_updated') {
+                console.log('Prompt settings updated in another window, refreshing suggestions');
+                // Clear cached suggestions to force a refresh from server
+                cachedSuggestions = null;
+                // Force refresh when prompt is updated
+                fetchSuggestions('', true);
+            }
+            
+            if (e.key === 'force_refresh_suggestions' && e.newValue === 'true') {
+                console.log('Force refresh suggestions triggered from another window');
+                // Clear cached suggestions to force a refresh from server
+                cachedSuggestions = null;
+                fetchSuggestions('', true);
+                // Clear the flag so we don't get into a refresh loop
+                localStorage.setItem('force_refresh_suggestions', 'false');
+            }
+            
+            if (e.key === 'last_suggestions_update') {
+                // Only update if the new timestamp is more recent than our last update
+                const newUpdateTime = parseInt(e.newValue, 10);
+                if (newUpdateTime > lastSuggestionUpdate) {
+                    console.log('Suggestions updated in another window, fetching updated suggestions');
+                    lastSuggestionUpdate = newUpdateTime;
+                    fetchSuggestions('', true);
+                }
+            }
+        });
+        
+        // Update the suggestion list with new suggestions
+        function updateSuggestionList(suggestions) {
+            // Get current suggestions for comparison
+            const currentSuggestions = [];
+            document.querySelectorAll('.suggestion-card p').forEach(p => {
+                currentSuggestions.push(p.textContent);
+            });
+            
+            // Check if suggestions are identical to avoid unnecessary updates
+            const areIdentical = suggestions.length === currentSuggestions.length && 
+                suggestions.every(suggestion => currentSuggestions.includes(suggestion));
+            
+            if (areIdentical) {
+                console.log('Suggestions unchanged, skipping update');
+                return;
+            }
+            
+            // Clear current suggestions
+            suggestionList.innerHTML = '';
+            
+            // Add new suggestions
+            suggestions.forEach(suggestion => {
+                const card = document.createElement('div');
+                card.className = 'suggestion-card mb-2 new';
+                card.onclick = function() {
+                    usePrompt(suggestion);
+                };
+                
+                card.innerHTML = `
+                    <div class="card">
+                        <div class="card-body py-2">
+                            <p class="mb-0">${suggestion}</p>
+                        </div>
+                    </div>
+                `;
+                
+                suggestionList.appendChild(card);
+            });
+        }
+        
+        // Function to get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Scroll to bottom initially
+        scrollToBottom();
+    });
+    
+    // Function to use a suggested prompt
+    function usePrompt(text) {
+        const input = document.getElementById('message-input');
+        input.value = text;
+        input.focus();
+    }
+</script>
 {% endblock extra_js %}

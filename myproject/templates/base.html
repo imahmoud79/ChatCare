@@ -7,24 +7,70 @@
     <title>{% block title %}Mental Health Counselor{% endblock %}</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     {% block extra_css %}{% endblock %}
+    <style>
+        /* Override Bootstrap colors for buttons and links */
+        .btn-primary {
+            background-color: #212529;
+            border-color: #212529;
+        }
+        .btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+            background-color: #343a40;
+            border-color: #343a40;
+        }
+        .btn-outline-primary {
+            color: #212529;
+            border-color: #212529;
+        }
+        .btn-outline-primary:hover, .btn-outline-primary:focus, .btn-outline-primary:active {
+            background-color: #212529;
+            border-color: #212529;
+        }
+        .text-primary {
+            color: #212529 !important;
+        }
+        a {
+            color: #212529;
+        }
+        a:hover {
+            color: #495057;
+        }
+        .brand-subtitle {
+            font-size: 0.75rem;
+            opacity: 0.8;
+        }
+    </style>
 </head>
 <body>
-    {% if not hide_navbar %}
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <!-- Common navbar with logo that appears on all pages -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="{% url 'chat_home' %}">Mental Health Counselor</a>
+            <a class="navbar-brand d-flex align-items-center" href="{% if user.is_authenticated %}{% url 'chat_home' %}{% else %}#{% endif %}">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-robot fs-4 me-2"></i>
+                    <div>
+                        {% if user.is_authenticated %}
+                        <span id="dynamic-site-name">Mental Health Counselor</span>
+                        {% else %}
+                        <span id="static-site-name">AI Counselor</span>
+                        {% endif %}
+                        <div class="brand-subtitle text-light-emphasis">AI-powered support</div>
+                    </div>
+                </div>
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     {% if user.is_authenticated %}
-                        {% if user.is_staff %}
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'admin_dashboard' %}">Admin Dashboard</a>
-                            </li>
-                        {% endif %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'chat_home' %}">Chat</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'settings_dashboard' %}">Settings</a>
+                        </li>
                         <li class="nav-item">
                             <form method="POST" action="{% url 'logout' %}" class="d-inline nav-link p-0">
                                 {% csrf_token %}
@@ -43,7 +89,6 @@
             </div>
         </div>
     </nav>
-    {% endif %}
 
     {% if messages %}
         <div class="container mt-3">
@@ -60,6 +105,89 @@
 
     <!-- Bootstrap JS and dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    {% if user.is_authenticated %}
+    <!-- Dynamic site name script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Function to update site name from server
+            function fetchAndUpdateSiteName(skipCache = false) {
+                // Only check cache if not skipping
+                if (!skipCache) {
+                    const cachedName = localStorage.getItem('dynamic_site_name');
+                    if (cachedName) {
+                        document.getElementById('dynamic-site-name').textContent = cachedName;
+                        document.title = cachedName;
+                    }
+                }
+                
+                // Always fetch from server to ensure we have the latest
+                fetch('{% url "get_site_name" %}')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success' && data.site_name) {
+                            const siteNameElement = document.getElementById('dynamic-site-name');
+                            if (siteNameElement) {
+                                siteNameElement.textContent = data.site_name;
+                            }
+                            document.title = data.site_name;
+                            localStorage.setItem('dynamic_site_name', data.site_name);
+                        }
+                    })
+                    .catch(error => console.error('Error fetching site name:', error));
+            }
+            
+            // Initial update - skip cache on first load
+            fetchAndUpdateSiteName(true);
+            
+            // Refresh site name every minute
+            setInterval(() => fetchAndUpdateSiteName(true), 60000);
+            
+            // Listen for storage events (changes made in other tabs/windows)
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'dynamic_site_name') {
+                    const siteNameElement = document.getElementById('dynamic-site-name');
+                    if (siteNameElement) {
+                        siteNameElement.textContent = e.newValue;
+                    }
+                    document.title = e.newValue;
+                }
+                
+                if (e.key === 'prompt_settings_updated') {
+                    // Force refresh site name
+                    fetchAndUpdateSiteName(true);
+                    
+                    // Refresh suggestions if on chat page
+                    if (window.location.pathname === '{% url "chat_home" %}') {
+                        if (typeof fetchSuggestions === 'function') {
+                            fetchSuggestions('', true);  // Force refresh
+                        }
+                    }
+                }
+            });
+            
+            // Listen for message events from iframes or other windows
+            window.addEventListener('message', function(event) {
+                if (event.data && event.data.type === 'prompt_engineering_updated') {
+                    fetchAndUpdateSiteName(true);
+                    
+                    // Refresh suggestions if on chat page
+                    if (window.location.pathname === '{% url "chat_home" %}') {
+                        if (typeof fetchSuggestions === 'function') {
+                            fetchSuggestions('', true);  // Force refresh
+                        }
+                    }
+                }
+            });
+            
+            // Listen for custom events
+            document.addEventListener('prompt_settings_updated', function(e) {
+                fetchAndUpdateSiteName(true);
+            });
+        });
+    </script>
+    {% endif %}
+    
     {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -1,81 +1,599 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Admin Dashboard{% endblock %}
+{% block title %}Settings{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+<style>
+    .nav-tabs .nav-link {
+        color: #212529;
+    }
+    .nav-tabs .nav-link.active {
+        font-weight: 500;
+        border-bottom: 2px solid #212529;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="card-title mb-0">Upload Resources</h4>
-                </div>
-                <div class="card-body">
-                    <form method="POST" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="file" class="form-label">Select file to upload</label>
-                            <input type="file" class="form-control" id="file" name="file" required>
-                            <div class="form-text">Max file size: 5MB. Supported formats: PDF, DOCX, TXT, etc.</div>
+    <!-- Tabs navigation -->
+    <ul class="nav nav-tabs mb-4" id="settingsTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="resources-tab" data-bs-toggle="tab" data-bs-target="#resources" type="button" role="tab" aria-controls="resources" aria-selected="true">Resources</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="model-tab" data-bs-toggle="tab" data-bs-target="#model" type="button" role="tab" aria-controls="model" aria-selected="false">AI Model</button>
+        </li>
+    </ul>
+
+    <!-- Tab content -->
+    <div class="tab-content" id="settingsTabsContent">
+        <!-- Resources Tab -->
+        <div class="tab-pane fade show active" id="resources" role="tabpanel" aria-labelledby="resources-tab">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-dark text-white">
+                            <h4 class="card-title mb-0">Upload Resources</h4>
                         </div>
-                        <button type="submit" class="btn btn-primary">Upload</button>
-                    </form>
+                        <div class="card-body">
+                            <form method="POST" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label for="file" class="form-label">Select file to upload</label>
+                                    <input type="file" class="form-control" id="file" name="file" required>
+                                    <div class="form-text">Max file size: 5MB. Supported formats: PDF, DOCX, TXT, etc.</div>
+                                </div>
+                                <button type="submit" class="btn btn-dark">Upload</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-dark text-white">
+                            <h4 class="card-title mb-0">Uploaded Resources</h4>
+                        </div>
+                        <div class="card-body">
+                            {% if files %}
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Name</th>
+                                                <th>Size</th>
+                                                <th>Uploaded</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for file in files %}
+                                                <tr>
+                                                    <td>
+                                                        <a href="{{ file.file.url }}" target="_blank">
+                                                            {{ file.name }}
+                                                        </a>
+                                                    </td>
+                                                    <td>{{ file.size|filesizeformat }}</td>
+                                                    <td>{{ file.uploaded_at|date:"F j, Y" }}</td>
+                                                    <td>
+                                                        <form method="POST" action="{% url 'delete_file' file.id %}" 
+                                                              class="d-inline" onsubmit="return confirm('Are you sure you want to delete this file?');">
+                                                            {% csrf_token %}
+                                                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                                        </form>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <p class="text-center my-4">No files have been uploaded yet.</p>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="card-title mb-0">Uploaded Resources</h4>
-                </div>
-                <div class="card-body">
-                    {% if files %}
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Size</th>
-                                        <th>Uploaded</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for file in files %}
-                                        <tr>
-                                            <td>
-                                                <a href="{{ file.file.url }}" target="_blank">
-                                                    {{ file.name }}
-                                                </a>
-                                            </td>
-                                            <td>{{ file.size|filesizeformat }}</td>
-                                            <td>{{ file.uploaded_at|date:"F j, Y" }}</td>
-                                            <td>
-                                                <form method="POST" action="{% url 'delete_file' file.id %}" 
-                                                      class="d-inline" onsubmit="return confirm('Are you sure you want to delete this file?');">
-                                                    {% csrf_token %}
-                                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+        <!-- AI Model Tab -->
+        <div class="tab-pane fade" id="model" role="tabpanel" aria-labelledby="model-tab">
+            <div class="row">
+                <div class="col-md-8 mx-auto">
+                    <div class="card">
+                        <div class="card-header bg-dark text-white">
+                            <h4 class="card-title mb-0">AI Model Selection</h4>
                         </div>
-                    {% else %}
-                        <p class="text-center my-4">No files have been uploaded yet.</p>
-                    {% endif %}
+                        <div class="card-body">
+                            <p class="mb-4">Choose the AI model that will power your mental health counselor experience. Different models have different characteristics and capabilities.</p>
+                            
+                            <form method="POST" id="model-selection-form">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label for="{{ preference_form.preferred_model.id_for_label }}" class="form-label">{{ preference_form.preferred_model.label }}</label>
+                                    {{ preference_form.preferred_model }}
+                                    <div class="form-text mt-2">
+                                        <div class="model-info mb-3 p-3 border rounded {% if preference_form.instance.preferred_model == 'llama-3.1-8b-instant' %}border-primary bg-light{% endif %}">
+                                            <p class="mb-1"><strong>Llama 3.1 8B Instant:</strong> Meta's fast and efficient language model with low rate limits, perfect for quick mental health guidance.</p>
+                                            <p class="mb-0 text-muted small">Best for: Fast responses, general advice with minimal processing time</p>
+                                        </div>
+                                        <div class="model-info mb-3 p-3 border rounded {% if preference_form.instance.preferred_model == 'llama3-8b-8192' %}border-primary bg-light{% endif %}">
+                                            <p class="mb-1"><strong>Llama 3 8B:</strong> Compact yet capable model that provides clear, concise mental health guidance.</p>
+                                            <p class="mb-0 text-muted small">Best for: Simple questions, concise mental health advice</p>
+                                        </div>
+                                        <div class="model-info mb-3 p-3 border rounded {% if preference_form.instance.preferred_model == 'llama-3.3-70b-versatile' %}border-primary bg-light{% endif %}">
+                                            <p class="mb-1"><strong>Llama 3.3 70B:</strong> Meta's versatile large language model, excellent for deep counseling and emotional support.</p>
+                                            <p class="mb-0 text-muted small">Best for: Complex situations, detailed emotional support, and nuanced responses</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-dark">Save Preferences</button>
+                            </form>
+
+                            <!-- Resource Usage Setting -->
+                            <div class="mt-4 mb-3">
+                                <h5 class="mb-3">Resource Settings</h5>
+                                <form method="POST" id="resource-settings-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="form_type" value="resource_settings">
+                                    
+                                    <!-- Use Resources Toggle -->
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label for="use_resources" class="form-label mb-0">Use Uploaded Resources</label>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="use_resources" name="use_resources"
+                                                       {% if current_params.use_resources %}checked{% endif %}>
+                                            </div>
+                                        </div>
+                                        <div class="form-text">When enabled, the AI will use your uploaded documents to personalize responses</div>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-dark">Save Resource Settings</button>
+                                </form>
+                            </div>
+
+                            <!-- Prompt Engineering -->
+                            <div class="mt-5 mb-4">
+                                <h5 class="mb-3">Prompt Engineering</h5>
+                                <p class="text-muted">Customize how the AI assistant behaves by providing a custom system prompt.</p>
+                                
+                                <form method="POST" id="prompt-engineering-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="form_type" value="prompt_engineering">
+                                    <!-- Use Custom Prompt Toggle -->
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label for="{{ preference_form.use_custom_prompt.id_for_label }}" class="form-label mb-0">{{ preference_form.use_custom_prompt.label }}</label>
+                                            <div class="form-check form-switch">
+                                                {{ preference_form.use_custom_prompt }}
+                                            </div>
+                                        </div>
+                                        <div class="form-text">Enable to use your custom prompt instead of the default system prompt.</div>
+                                    </div>
+                                    
+                                    <!-- Custom System Prompt -->
+                                    <div class="mb-3" id="custom-prompt-container">
+                                        <label for="{{ preference_form.custom_system_prompt.id_for_label }}" class="form-label">{{ preference_form.custom_system_prompt.label }}</label>
+                                        {{ preference_form.custom_system_prompt }}
+                                        <div class="form-text">{{ preference_form.custom_system_prompt.help_text }}</div>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-dark">Save Prompt Settings</button>
+                                </form>
+                                
+                                <!-- Hidden Frame for Background Communication -->
+                                <iframe id="update-frame" name="update-frame" style="display:none;"></iframe>
+                            </div>
+
+                            <!-- AI Model Parameters -->
+                            <div class="mt-4">
+                                <h5 class="mb-3">Model Parameters</h5>
+                                <form method="POST" id="model-params-form">
+                                    {% csrf_token %}
+                                    
+                                    <!-- Temperature -->
+                                    <div class="mb-3">
+                                        <label for="temperature" class="form-label d-flex justify-content-between">
+                                            Temperature
+                                            <span class="temperature-value">{{ current_params.temperature }}</span>
+                                        </label>
+                                        <input type="range" class="form-range" id="temperature" name="temperature"
+                                               min="0" max="1" step="0.1" value="{{ current_params.temperature }}">
+                                    </div>
+
+                                    <!-- Max Completion Tokens -->
+                                    <div class="mb-3">
+                                        <label for="max_tokens" class="form-label d-flex justify-content-between">
+                                            Max Completion Tokens
+                                            <span class="max-tokens-value">{{ current_params.max_tokens }}</span>
+                                        </label>
+                                        <input type="range" class="form-range" id="max_tokens" name="max_tokens"
+                                               min="1000" max="32767" step="1000" value="{{ current_params.max_tokens }}">
+                                    </div>
+
+                                    <!-- Stream Toggle -->
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label for="stream" class="form-label mb-0">Stream</label>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="stream" name="stream"
+                                                       {% if current_params.stream %}checked{% endif %}>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-dark">Update Parameters</button>
+                                </form>
+                                
+                                <!-- Success Alert -->
+                                <div class="alert alert-success alert-dismissible fade d-none mt-3" role="alert" id="success-alert">
+                                    <span id="success-message">Parameters updated successfully!</span>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                                
+                                <!-- Error Alert -->
+                                <div class="alert alert-danger alert-dismissible fade d-none mt-3" role="alert" id="error-alert">
+                                    <span id="error-message"></span>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Add JavaScript for parameter controls -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check URL for tab parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        
+        // Check localStorage for saved tab
+        const savedTab = localStorage.getItem('active_settings_tab');
+        
+        // Determine which tab to show
+        let tabToShow = 'resources';  // default tab
+        
+        if (tabParam) {
+            // URL parameter takes precedence
+            tabToShow = tabParam;
+            // Update localStorage to match URL
+            localStorage.setItem('active_settings_tab', tabParam);
+        } else if (savedTab) {
+            tabToShow = savedTab;
+        }
+        
+        // Switch to the correct tab
+        if (tabToShow === 'model') {
+            const modelTab = document.getElementById('model-tab');
+            if (modelTab) {
+                modelTab.click();
+            }
+        }
+        
+        // Add event listeners for tab changes
+        document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tab => {
+            tab.addEventListener('shown.bs.tab', function(e) {
+                // Store the newly activated tab in localStorage
+                const tabId = e.target.id;
+                if (tabId === 'model-tab') {
+                    localStorage.setItem('active_settings_tab', 'model');
+                } else if (tabId === 'resources-tab') {
+                    localStorage.setItem('active_settings_tab', 'resources');
+                }
+            });
+        });
+        
+        // Temperature slider
+        const temperatureSlider = document.getElementById('temperature');
+        const temperatureValue = document.querySelector('.temperature-value');
+        temperatureSlider.addEventListener('input', function() {
+            temperatureValue.textContent = this.value;
+        });
+
+        // Max tokens slider
+        const maxTokensSlider = document.getElementById('max_tokens');
+        const maxTokensValue = document.querySelector('.max-tokens-value');
+        maxTokensSlider.addEventListener('input', function() {
+            maxTokensValue.textContent = this.value;
+        });
+
+        // Custom prompt toggle
+        const useCustomPromptToggle = document.getElementById('{{ preference_form.use_custom_prompt.id_for_label }}');
+        const customPromptContainer = document.getElementById('custom-prompt-container');
+        
+        // Function to toggle custom prompt visibility
+        function toggleCustomPromptVisibility() {
+            if (useCustomPromptToggle.checked) {
+                customPromptContainer.style.display = 'block';
+            } else {
+                customPromptContainer.style.display = 'none';
+            }
+        }
+        
+        // Set initial state
+        toggleCustomPromptVisibility();
+        
+        // Add event listener for changes
+        useCustomPromptToggle.addEventListener('change', toggleCustomPromptVisibility);
+
+        // Success and error alerts
+        const successAlert = document.getElementById('success-alert');
+        const errorAlert = document.getElementById('error-alert');
+        const errorMessage = document.getElementById('error-message');
+        
+        // Show success message function
+        function showSuccessMessage(message) {
+            // Update message text if provided
+            if (message) {
+                document.getElementById('success-message').textContent = message;
+            }
+            
+            // Show success alert
+            successAlert.classList.remove('d-none');
+            successAlert.classList.add('show');
+            
+            // Hide error alert if shown
+            errorAlert.classList.add('d-none');
+            errorAlert.classList.remove('show');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                successAlert.classList.remove('show');
+                setTimeout(() => successAlert.classList.add('d-none'), 150);
+            }, 5000);
+        }
+        
+        // Show error message function
+        function showErrorMessage(message) {
+            // Update error message
+            errorMessage.textContent = message || 'An error occurred. Please try again.';
+            
+            // Show error alert
+            errorAlert.classList.remove('d-none');
+            errorAlert.classList.add('show');
+            
+            // Hide success alert if shown
+            successAlert.classList.add('d-none');
+            successAlert.classList.remove('show');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                errorAlert.classList.remove('show');
+                setTimeout(() => errorAlert.classList.add('d-none'), 150);
+            }, 5000);
+        }
+        
+        // Handle Model Selection Form Submit
+        const modelSelectionForm = document.getElementById('model-selection-form');
+        if (modelSelectionForm) {
+            modelSelectionForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                try {
+                    const formData = new FormData(this);
+                    formData.append('form_type', 'model_selection');
+                    
+                    const response = await fetch('{% url "settings_dashboard" %}', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        showSuccessMessage('Model preferences saved successfully!');
+                    } else {
+                        showErrorMessage(data.message || 'Error saving model preferences');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showErrorMessage('Error saving model preferences');
+                }
+            });
+        }
+        
+        // Handle Resource Settings Form Submit
+        const resourceSettingsForm = document.getElementById('resource-settings-form');
+        if (resourceSettingsForm) {
+            resourceSettingsForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                try {
+                    const formData = new FormData(this);
+                    
+                    const response = await fetch('{% url "settings_dashboard" %}', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        showSuccessMessage('Resource settings saved successfully!');
+                    } else {
+                        showErrorMessage(data.message || 'Error saving resource settings');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showErrorMessage('Error saving resource settings');
+                }
+            });
+        }
+        
+        // Handle Prompt Engineering Form Submit
+        const promptEngineeringForm = document.getElementById('prompt-engineering-form');
+        if (promptEngineeringForm) {
+            promptEngineeringForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                try {
+                    const formData = new FormData(this);
+                    
+                    const response = await fetch('{% url "settings_dashboard" %}', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        showSuccessMessage('Prompt engineering settings saved successfully!');
+                        
+                        // Clear all site name caches immediately
+                        localStorage.removeItem('dynamic_site_name');
+                        
+                        // Trigger site-wide updates
+                        updateSiteName(true);  // Added force refresh parameter
+                        
+                        // Notify other components about the update
+                        fetch('{% url "notify_prompt_update" %}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                            }
+                        })
+                          .then(response => response.json())
+                          .then(data => {
+                              console.log('Prompt update notification sent:', data);
+                              
+                              // Force refresh suggestions on all open tabs
+                              localStorage.setItem('force_refresh_suggestions', 'true');
+                              
+                              // Broadcast the update to all windows
+                              window.dispatchEvent(new StorageEvent('storage', {
+                                  key: 'prompt_settings_updated',
+                                  newValue: String(new Date().getTime())
+                              }));
+                          })
+                          .catch(err => console.error('Error notifying about prompt update:', err));
+                        
+                        // Send event to parent window if in an iframe
+                        try {
+                            window.parent.postMessage({
+                                type: 'prompt_engineering_updated',
+                                timestamp: new Date().getTime()
+                            }, '*');
+                        } catch (err) {
+                            console.log('Could not send message to parent window');
+                        }
+                        
+                        // Create and dispatch a custom event that other pages can listen for
+                        document.dispatchEvent(new CustomEvent('prompt_settings_updated'));
+                        
+                        // Store current tab before reload
+                        localStorage.setItem('active_settings_tab', 'model');
+                        
+                        // Reload the page after a short delay to ensure everything is updated
+                        setTimeout(() => {
+                            window.location.href = '{% url "settings_dashboard" %}?tab=model';
+                        }, 1000);
+                    } else {
+                        showErrorMessage(data.message || 'Error saving prompt settings');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showErrorMessage('Error saving prompt settings');
+                }
+            });
+        }
+        
+        // Handle Model Parameters Form Submit
+        const modelParamsForm = document.getElementById('model-params-form');
+        if (modelParamsForm) {
+            modelParamsForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = {
+                    temperature: parseFloat(temperatureSlider.value),
+                    max_tokens: parseInt(maxTokensSlider.value),
+                    stream: document.getElementById('stream').checked
+                };
+
+                try {
+                    const response = await fetch('/chat/update_model_params/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        showSuccessMessage('Parameters updated successfully!');
+                        // Store values in localStorage
+                        localStorage.setItem('modelParams', JSON.stringify(formData));
+                    } else {
+                        showErrorMessage(data.message || 'Error updating parameters');
+                    }
+                } catch (error) {
+                    showErrorMessage('Error updating parameters. Please try again.');
+                    console.error('Error:', error);
+                }
+            });
+        }
+        
+        // Add event listeners for alert close buttons
+        document.querySelectorAll('.alert .btn-close').forEach(button => {
+            button.addEventListener('click', function() {
+                const alert = this.closest('.alert');
+                alert.classList.remove('show');
+                setTimeout(() => alert.classList.add('d-none'), 150);
+            });
+        });
+
+        // Function to update site name without page reload
+        function updateSiteName(forceRefresh = false) {
+            fetch('{% url "get_site_name" %}')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success' && data.site_name) {
+                        // Update site name in all open windows/tabs
+                        localStorage.setItem('dynamic_site_name', data.site_name);
+                        
+                        // Update current page
+                        const siteNameElement = document.getElementById('dynamic-site-name');
+                        if (siteNameElement) {
+                            siteNameElement.textContent = data.site_name;
+                        }
+                        
+                        // Update page title
+                        document.title = data.site_name;
+                        
+                        if (forceRefresh) {
+                            // Force refresh suggestions on all open tabs
+                            localStorage.setItem('force_refresh_suggestions', 'true');
+                            
+                            // Broadcast the update to all windows
+                            window.dispatchEvent(new StorageEvent('storage', {
+                                key: 'prompt_settings_updated',
+                                newValue: String(new Date().getTime())
+                            }));
+                        }
+                    }
+                })
+                .catch(error => console.error('Error fetching site name:', error));
+        }
+    });
+</script>
 {% endblock %} 
