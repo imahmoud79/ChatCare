@@ -522,31 +522,17 @@
         
         // Listen for prompt engineering updates
         window.addEventListener('storage', function(e) {
+            // Only handle one type of event for prompt updates to prevent multiple refreshes
             if (e.key === 'prompt_settings_updated') {
                 console.log('Prompt settings updated in another window, refreshing suggestions');
                 // Clear cached suggestions to force a refresh from server
                 cachedSuggestions = null;
                 // Force refresh when prompt is updated
                 fetchSuggestions('', true);
-            }
-            
-            if (e.key === 'force_refresh_suggestions' && e.newValue === 'true') {
-                console.log('Force refresh suggestions triggered from another window');
-                // Clear cached suggestions to force a refresh from server
-                cachedSuggestions = null;
-                fetchSuggestions('', true);
-                // Clear the flag so we don't get into a refresh loop
+                
+                // Clear any other refresh flags to prevent multiple refreshes
                 localStorage.setItem('force_refresh_suggestions', 'false');
-            }
-            
-            if (e.key === 'last_suggestions_update') {
-                // Only update if the new timestamp is more recent than our last update
-                const newUpdateTime = parseInt(e.newValue, 10);
-                if (newUpdateTime > lastSuggestionUpdate) {
-                    console.log('Suggestions updated in another window, fetching updated suggestions');
-                    lastSuggestionUpdate = newUpdateTime;
-                    fetchSuggestions('', true);
-                }
+                localStorage.removeItem('last_suggestions_update');
             }
         });
         

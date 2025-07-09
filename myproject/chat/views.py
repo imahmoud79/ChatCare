@@ -663,10 +663,13 @@ def settings_dashboard(request):
         form_type = request.POST.get('form_type', '')
         
         if 'preferred_model' in request.POST or form_type == 'model_selection':
-            # Handle model selection form
-            preference_form = UserPreferenceForm(request.POST, instance=preference)
-            if preference_form.is_valid():
-                preference_form.save()
+            # Handle model selection form - only update the model field
+            preferred_model = request.POST.get('preferred_model')
+            if preferred_model in dict(UserPreference.MODEL_CHOICES):
+                # Update only the model preference
+                preference.preferred_model = preferred_model
+                preference.save(update_fields=['preferred_model'])
+                
                 if is_ajax:
                     return JsonResponse({
                         'status': 'success',
@@ -678,7 +681,7 @@ def settings_dashboard(request):
             elif is_ajax:
                 return JsonResponse({
                     'status': 'error',
-                    'message': 'Invalid form data'
+                    'message': 'Invalid model selection'
                 })
         
         elif 'use_resources' in request.POST or form_type == 'resource_settings':

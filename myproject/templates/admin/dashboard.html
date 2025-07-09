@@ -115,6 +115,7 @@
                             
                             <form method="POST" id="model-selection-form">
                                 {% csrf_token %}
+                                <input type="hidden" name="form_type" value="model_selection">
                                 <div class="mb-3">
                                     <label for="{{ preference_form.preferred_model.id_for_label }}" class="form-label">{{ preference_form.preferred_model.label }}</label>
                                     {{ preference_form.preferred_model }}
@@ -463,7 +464,7 @@
                         // Trigger site-wide updates
                         updateSiteName(true);  // Added force refresh parameter
                         
-                        // Notify other components about the update
+                        // Notify other components about the update - this will trigger one refresh
                         fetch('{% url "notify_prompt_update" %}', {
                             method: 'POST',
                             headers: {
@@ -475,37 +476,18 @@
                           .then(data => {
                               console.log('Prompt update notification sent:', data);
                               
-                              // Force refresh suggestions on all open tabs
-                              localStorage.setItem('force_refresh_suggestions', 'true');
+                              // Trigger a single refresh by setting the prompt_settings_updated flag
+                              localStorage.setItem('prompt_settings_updated', String(new Date().getTime()));
                               
-                              // Broadcast the update to all windows
-                              window.dispatchEvent(new StorageEvent('storage', {
-                                  key: 'prompt_settings_updated',
-                                  newValue: String(new Date().getTime())
-                              }));
+                              // Store current tab before reload
+                              localStorage.setItem('active_settings_tab', 'model');
+                              
+                              // Reload the page after a short delay to ensure everything is updated
+                              setTimeout(() => {
+                                  window.location.href = '{% url "settings_dashboard" %}?tab=model';
+                              }, 1000);
                           })
                           .catch(err => console.error('Error notifying about prompt update:', err));
-                        
-                        // Send event to parent window if in an iframe
-                        try {
-                            window.parent.postMessage({
-                                type: 'prompt_engineering_updated',
-                                timestamp: new Date().getTime()
-                            }, '*');
-                        } catch (err) {
-                            console.log('Could not send message to parent window');
-                        }
-                        
-                        // Create and dispatch a custom event that other pages can listen for
-                        document.dispatchEvent(new CustomEvent('prompt_settings_updated'));
-                        
-                        // Store current tab before reload
-                        localStorage.setItem('active_settings_tab', 'model');
-                        
-                        // Reload the page after a short delay to ensure everything is updated
-                        setTimeout(() => {
-                            window.location.href = '{% url "settings_dashboard" %}?tab=model';
-                        }, 1000);
                     } else {
                         showErrorMessage(data.message || 'Error saving prompt settings');
                     }

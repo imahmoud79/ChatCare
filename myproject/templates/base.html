@@ -157,12 +157,8 @@
                     // Force refresh site name
                     fetchAndUpdateSiteName(true);
                     
-                    // Refresh suggestions if on chat page
-                    if (window.location.pathname === '{% url "chat_home" %}') {
-                        if (typeof fetchSuggestions === 'function') {
-                            fetchSuggestions('', true);  // Force refresh
-                        }
-                    }
+                    // Don't trigger suggestion refresh here since it's handled in chat_home.html
+                    // This prevents duplicate refreshes
                 }
             });
             
@@ -171,12 +167,8 @@
                 if (event.data && event.data.type === 'prompt_engineering_updated') {
                     fetchAndUpdateSiteName(true);
                     
-                    // Refresh suggestions if on chat page
-                    if (window.location.pathname === '{% url "chat_home" %}') {
-                        if (typeof fetchSuggestions === 'function') {
-                            fetchSuggestions('', true);  // Force refresh
-                        }
-                    }
+                    // Don't trigger suggestion refresh here since it's handled in chat_home.html
+                    // This prevents duplicate refreshes
                 }
             });
             
