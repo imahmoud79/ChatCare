@@ -1,8 +1,13 @@
 import requests
+import os
+from dotenv import load_dotenv
 
-# === API KEYS ===
-SERP_API_KEY = "e405fd1bb3abb711a25f58b2866be201b22964670891d72e412c23fc22d92159"
-GROQ_API_KEY = "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"
+# Load environment variables
+load_dotenv()
+
+# Get API Keys from environment
+SERP_API_KEY = os.getenv("SERP_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # === SEARCH FUNCTION ===
 def search_google(query):

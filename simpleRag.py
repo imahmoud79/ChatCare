@@ -1,8 +1,12 @@
 import requests
 import os
+from dotenv import load_dotenv
 
-# Set your Groq API Key
-GROQ_API_KEY = "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"
+# Load environment variables
+load_dotenv()
+
+# Get API Key from environment
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 # Fake knowledge base
