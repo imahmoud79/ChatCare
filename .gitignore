@@ -7,3 +7,6 @@
 .env.development
 .env.test
 .env.production
+
+simplechat.py
+simpleRag.py
